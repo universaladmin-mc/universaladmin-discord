@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "dev.universaladmin.discord"
-version = rootProject.version
+version = "1.6.0"
 base.archivesName.set("universaladmin-discord")
 
 /** Also written into plugin.yml ("libraries"), so compile and runtime always match. */
@@ -28,10 +28,16 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/") { name = "papermc" }
+    // UniversalAdmin's releases - its jar contains the extension API.
+    maven("https://api.modrinth.com/maven") { name = "modrinth" }
 }
 
+/** UniversalAdmin to compile against: a local build (-PuniversaladminJar=...) or the release from Modrinth. */
+val universalAdmin: Any = providers.gradleProperty("universaladminJar").orNull?.let { files(it) }
+    ?: "maven.modrinth:universaladmin:${property("universaladminVersion")}"
+
 dependencies {
-    compileOnly(project(":universaladmin-api"))
+    compileOnly(universalAdmin)
     compileOnly("io.papermc.paper:paper-api:${property("paperApiVersion")}")
     // Bot mode. Not shaded: Paper downloads it from Maven Central on the first
     // start (plugin.yml "libraries"), so the plugin jar stays small.
@@ -42,7 +48,7 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.12.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation(project(":universaladmin-api"))
+    testImplementation(universalAdmin)
     testImplementation("io.papermc.paper:paper-api:${property("paperApiVersion")}")
     testImplementation("net.dv8tion:JDA:$jdaVersion") {
         exclude(module = "opus-java")
@@ -67,4 +73,18 @@ tasks.processResources {
     filesMatching("plugin.yml") {
         expand(props)
     }
+}
+
+// Every jar carries its license (GPL-3.0-or-later).
+tasks.withType<Jar>().configureEach {
+    from("LICENSE") {
+        into("META-INF")
+    }
+}
+
+tasks.register("printVersion") {
+    group = "help"
+    description = "Prints the project version (used by the release workflow's tag check)."
+    val projectVersion = project.version.toString()
+    doLast { println(projectVersion) }
 }

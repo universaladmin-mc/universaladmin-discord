@@ -29,6 +29,13 @@ public final class DiscordPlugin extends JavaPlugin {
         client = new WebhookClient(getLogger());
         MessageBundles.register(this, universalAdmin.get().messages(), "en_US", "de_DE");
         universalAdmin.get().extensions().register(this, new DiscordModule(() -> config, this::loadSettings, client));
+
+        // UniversalAdmin 1.6+ checks this extension's own releases too; older ones lack the method.
+        try {
+            universalAdmin.get().extensions().updatesFrom(this, "universaladmin-mc/universaladmin-discord", "universaladmin-discord-");
+        } catch (NoSuchMethodError olderUniversalAdmin) {
+            // Updates come by hand, as before.
+        }
     }
 
     @Override
